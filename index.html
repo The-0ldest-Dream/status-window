@@ -356,6 +356,13 @@
   .edit-btn:focus-visible,.generate-btn:focus-visible,.pt-btn:focus-visible,.fail-btn:focus-visible,
   .icon-circle:focus-visible,.mini-fab:focus-visible,.boss-toggle:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px;}
   .checkbox:focus-visible{outline:2px solid var(--gold-light);outline-offset:2px;}
+  /* routine */
+  .day-tabs{display:flex;justify-content:space-between;gap:4px;margin-bottom:16px;}
+  .day-tab{flex:1;padding:8px 0;border:1px solid var(--gold-dim);background:transparent;color:var(--muted);
+    font-family:'Orbitron',sans-serif;font-size:.72rem;cursor:pointer;border-radius:3px;}
+  .day-tab.active{border-color:var(--gold);color:var(--gold-light);background:rgba(var(--accent-rgb),.1);
+    box-shadow:0 0 8px rgba(var(--accent-rgb),.4);}
+
   /* rank-up congratulations toast */
   .rankup-toast{display:none;position:fixed;top:14%;left:50%;transform:translateX(-50%);z-index:550;
     pointer-events:none;width:min(78vw,260px);text-align:center;padding:22px 18px;
@@ -448,14 +455,7 @@
       <div class="field"><label>Age</label><input id="in-age" type="number" min="0" value="25"></div>
       <div class="field"><label>Class / Job</label><input id="in-class" type="text" value="Assassin"></div>
       <div class="field"><label>Title</label><input id="in-title" type="text" value="Lost In Dark"></div>
-      <h2 class="stats-heading">Core Stats <span>(scale 0&ndash;100)</span></h2>
-      <div class="stat-grid">
-        <div class="field"><label>Strength</label><input id="in-str" type="number" min="0" max="100" value="14"></div>
-        <div class="field"><label>Wealth</label><input id="in-wealth" type="number" min="0" max="100" value="10"></div>
-        <div class="field"><label>Skills</label><input id="in-skl" type="number" min="0" max="100" value="16"></div>
-        <div class="field"><label>Knowledge</label><input id="in-know" type="number" min="0" max="100" value="12"></div>
-        <div class="field"><label>Agility</label><input id="in-agi" type="number" min="0" max="100" value="20"></div>
-      </div>
+      <p class="stats-heading" style="margin:20px 0 0;">All 5 stats start at <b>0</b> &mdash; the only way up is doing quests.</p>
       <button class="generate-btn" onclick="generateStatus()">Generate Status →</button>
     </section>
 
@@ -477,6 +477,9 @@
         <div class="dash-right">
           <div class="radar-wrap"><svg id="radar" viewBox="0 0 320 320"></svg></div>
         </div>
+      </div>
+      <div class="growth-block">
+        <button class="help-link" onclick="showPage('routine')">Routine ›</button>
       </div>
       <div class="bottom-action">
         <button class="generate-btn" onclick="showPage('quest')">Daily quest</button>
@@ -548,6 +551,29 @@
       </div>
     </section>
 
+    <section id="page-routine" class="card">
+      <div class="theme-blue">
+        <div class="quest-header">
+          <button class="icon-circle" onclick="showPage('status')" aria-label="Back to status">←</button>
+          <div class="quest-title-box">ROUTINE</div>
+        </div>
+        <div class="day-tabs">
+          <button class="day-tab" data-day="Sun" onclick="selectRoutineDay('Sun')">S</button>
+          <button class="day-tab" data-day="Mon" onclick="selectRoutineDay('Mon')">M</button>
+          <button class="day-tab" data-day="Tue" onclick="selectRoutineDay('Tue')">T</button>
+          <button class="day-tab" data-day="Wed" onclick="selectRoutineDay('Wed')">W</button>
+          <button class="day-tab" data-day="Thu" onclick="selectRoutineDay('Thu')">T</button>
+          <button class="day-tab" data-day="Fri" onclick="selectRoutineDay('Fri')">F</button>
+          <button class="day-tab" data-day="Sat" onclick="selectRoutineDay('Sat')">S</button>
+        </div>
+        <div class="field" style="flex-direction:row;gap:8px;">
+          <input id="routine-input" type="text" placeholder="Add a task for this day...">
+          <button class="pt-btn" style="width:auto;padding:0 14px;flex-shrink:0;" onclick="addRoutineItem()">Add</button>
+        </div>
+        <div class="manage-list" id="routine-list" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
     <section id="page-stat-wealth" class="card">
       <div class="theme-blue">
         <div class="quest-header">
@@ -578,25 +604,6 @@
         </div>
         <div class="list-add"><input id="add-knowledge" type="text" placeholder="Add something to learn..." onkeydown="if(event.key==='Enter')addListItem('knowledge')"><button class="pt-btn" onclick="addListItem('knowledge')">+</button></div>
         <div class="manage-list" id="list-knowledge"></div>
-      </div>
-    </section>
-
-    <section id="page-strength" class="card">
-      <div class="theme-blue">
-        <div class="quest-header">
-          <button class="icon-circle" onclick="showPage('status')" aria-label="Back to status">←</button>
-          <div class="quest-title-box">STRENGTH</div>
-        </div>
-        <h3 class="stats-heading" style="margin-top:0;">Total Stats <span>&mdash; last 14 days</span></h3>
-        <svg id="growth-chart" viewBox="0 0 440 170" style="margin-bottom:8px;"></svg>
-
-        <h3 class="stats-heading">Monthly Recap</h3>
-        <div class="year-nav-row">
-          <button class="year-nav-btn" id="month-prev" onclick="monthNav(-1)" aria-label="Previous month">‹</button>
-          <span class="year-label" id="month-label">—</span>
-          <button class="year-nav-btn" id="month-next" onclick="monthNav(1)" aria-label="Next month">›</button>
-        </div>
-        <div class="recap-list" id="recap-list"></div>
       </div>
     </section>
 
@@ -644,24 +651,41 @@
         </div>
         <div class="notif-list">
           <div class="notif-item"><b>Status</b><p>Your character sheet — name, class, and 5 stats plotted on the pentagon.</p></div>
-          <div class="notif-item"><b>Available Points</b><p>Tap the + next to a stat to spend points and grow it. Earn more by completing quests (+1), keeping your streak alive (+2), or adding a log entry (+1).</p></div>
+          <div class="notif-item"><b>Available Points</b><p>Every stat and your point pool start at 0 — nothing is given for free. Tap the + next to a stat to spend points and grow it, and earn points by completing quests (+1), keeping your streak alive (+2), or adding a log entry (+1).</p></div>
           <div class="notif-item"><b>Rank badge</b><p>Get all 5 stats to 100 to rank up (E → SSS). Each rank-up clears the pentagon back to 0 so you can climb toward the next one — until SSS, which stays maxed for good. SS and above glow crimson, and a brief congratulations appears each time you rank up.</p></div>
           <div class="notif-item"><b>Wealth / Skills / Knowledge</b><p>Tap those names on the pentagon to open a log where you can add or delete your own entries. Adding one earns a point too.</p></div>
           <div class="notif-item"><b>Daily quest</b><p>Your checklist for the day. Tap a box to mark it complete and earn a point.</p></div>
+          <div class="notif-item"><b>Routine</b><p>Open it from "Routine ›" on Status. Set different tasks for each day of the week, tick them off as you go — they reset automatically the next time that day comes around.</p></div>
           <div class="notif-item"><b>+ (new quest)</b><p>Create your own quests: set a target, category, and optionally a crimson Boss Quest. Name the category after a pentagon stat (Strength, Wealth, Skills, Knowledge, or Agility) and completing it feeds that stat directly instead of the general point pool — for Wealth, Skills or Knowledge it also adds an entry to that stat's log.</p></div>
           <div class="notif-item"><b>Running &amp; Agility</b><p>Any quest with "run" or "jog" in its name automatically feeds Agility and the running chart — multiple running quests on the same day add together.</p></div>
           <div class="notif-item"><b>Growth Tree</b><p>A visual tree with clickable regions — tap a branch, trunk, or the roots for details.</p></div>
           <div class="notif-item"><b>Streak &amp; History</b><p>Your running chart plus a full-year calendar — green for days you ran, red for days you didn't. Use ‹ › to browse other years. Keeping the streak alive earns bonus points.</p></div>
           <div class="notif-item"><b>Fail Daily Quest</b><p>Simulates missing your quests and triggers the penalty countdown.</p></div>
           <div class="notif-item"><b>Export / Import</b><p>Save your data as a file on the Streak page, or load it back in later.</p></div>
-          <div class="notif-item"><b>Total Stats chart</b><p>Tap Strength on the status page to see a line chart of your combined stat total over the last 14 days. It drops back to zero after each rank-up.</p></div>
-          <div class="notif-item"><b>Monthly Recap</b><p>Also inside Strength. Shows quests done, days fully completed, distance run, points earned and your streaks for any month — use ‹ › to browse.</p></div>
+          <div class="notif-item"><b>Monthly Recap &amp; Total Stats</b><p>Tap STRENGTH on the pentagon. A line chart of your combined stat total (last 14 days, drops to zero after each rank-up), plus quests done, days fully completed, distance run, points earned and your streaks for any month — use ‹ › to browse.</p></div>
           <div class="notif-item"><b>Sounds</b><p>Soft sound effects play on taps, quest completion, rank-ups, penalties and glitches. Lower your device volume to mute them.</p></div>
           <div class="notif-item"><b>Erase data</b><p>The trash icon at the top-left of Create Status wipes everything (all profiles) after a warning. It cannot be undone.</p></div>
           <div class="notif-item"><b>Install as an app</b><p>When this page is hosted on https or localhost, your browser shows an Install button. Installed, it appears as &quot;System&quot; with a dark icon.</p></div>
           <div class="notif-item"><b>Name + Age</b><p>These work like a login. Change either one to start a fresh character, or re-enter an old name and age to restore that profile.</p></div>
           <div class="notif-item"><b>Appearance</b><p>The circle in the top-right of Create Status switches the whole system between the blue "Darkness" look and the golden "Divine" look.</p></div>
         </div>
+      </div>
+    </section>
+
+    <section id="page-recap" class="card">
+      <div class="theme-blue">
+        <div class="quest-header">
+          <button class="icon-circle" onclick="showPage('status')" aria-label="Back to status">←</button>
+          <div class="quest-title-box">MONTHLY RECAP</div>
+        </div>
+        <h3 class="stats-heading" style="margin-top:0;">Total Stats <span>&mdash; last 14 days</span></h3>
+        <svg id="growth-chart" viewBox="0 0 440 170" style="margin-bottom:14px;"></svg>
+        <div class="year-nav-row">
+          <button class="year-nav-btn" id="month-prev" onclick="monthNav(-1)" aria-label="Previous month">‹</button>
+          <span class="year-label" id="month-label">—</span>
+          <button class="year-nav-btn" id="month-next" onclick="monthNav(1)" aria-label="Next month">›</button>
+        </div>
+        <div class="recap-list" id="recap-list"></div>
       </div>
     </section>
 
@@ -674,7 +698,7 @@
   </div>
 
 <script>
-  const PAGES = ['setup','status','quest','penalty','notif','help','streak','quest-create','stat-wealth','stat-skills','stat-knowledge','tree','strength'];
+  const PAGES = ['setup','status','quest','penalty','notif','help','streak','quest-create','stat-wealth','stat-skills','stat-knowledge','tree','recap','routine'];
   let currentPage = 'setup';
   let previousPage = 'status';
   let pointPool = 10;
@@ -683,6 +707,9 @@
   let streak = 0;
   const history = {};
   const runHistory = {};
+  const DAY_KEYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const routines = {Sun:[],Mon:[],Tue:[],Wed:[],Thu:[],Fri:[],Sat:[]};
+  let routineDay = DAY_KEYS[new Date().getDay()];
   const pointsHistory = {}, questsDoneHistory = {}, statSumHistory = {};
   let longestStreak = 0;
   let lastResetDate = todayStr();
@@ -694,9 +721,10 @@
     document.querySelector('.notif-bell').style.display = name==='setup' ? 'none' : 'flex';
     if(name !== 'penalty') clearInterval(countdownInterval);
     if(name === 'quest-create') buildQuestManageList();
+    if(name === 'routine'){ routineDay = DAY_KEYS[new Date().getDay()]; buildRoutineDay(); }
     if(name === 'tree') drawTree();
-    if(name === 'streak'){ viewedYear = new Date().getFullYear(); buildHeatmap(); drawRunChart(); document.getElementById('streak-num').textContent = streak; }
-    if(name === 'strength'){ drawGrowthChart(); const c = currentYM(); recapY = c.y; recapM = c.m; buildRecap(); }
+    if(name === 'streak'){ viewedYear = new Date().getFullYear(); buildHeatmap(); drawRunChart(); drawGrowthChart(); document.getElementById('streak-num').textContent = streak; }
+    if(name === 'recap'){ const c = currentYM(); recapY = c.y; recapM = c.m; buildRecap(); drawGrowthChart(); }
   }
   function openNotif(){
     previousPage = currentPage==='notif' ? previousPage : currentPage;
@@ -844,6 +872,41 @@
       buildQuestList(); buildQuestManageList(); saveState();
     }
   }
+  function selectRoutineDay(day){ routineDay = day; buildRoutineDay(); }
+  function buildRoutineDay(){
+    document.querySelectorAll('.day-tab').forEach(t=>t.classList.toggle('active', t.dataset.day===routineDay));
+    const list = routines[routineDay] || [];
+    const wrap = document.getElementById('routine-list');
+    wrap.innerHTML = list.map((item,i)=>`
+      <div class="manage-row">
+        <span class="checkbox${item.done?' checked':''}" role="checkbox" aria-checked="${item.done}" tabindex="0" data-index="${i}"></span>
+        <span style="flex:1;${item.done?'color:var(--muted);text-decoration:line-through;':''}">${item.name}</span>
+        <button class="pt-btn" onclick="removeRoutineItem(${i})">×</button>
+      </div>`).join('') || `<p style="color:var(--muted);font-size:.85rem;">No items for this day yet.</p>`;
+    wrap.querySelectorAll('.checkbox').forEach(cb=>{
+      cb.addEventListener('click', ()=>toggleRoutineItem(+cb.dataset.index));
+      cb.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleRoutineItem(+cb.dataset.index); } });
+    });
+  }
+  function toggleRoutineItem(i){
+    const item = routines[routineDay][i];
+    if(!item) return;
+    item.done = !item.done;
+    item.done ? sfxComplete() : sfxClick();
+    buildRoutineDay(); saveState();
+  }
+  function addRoutineItem(){
+    const input = document.getElementById('routine-input');
+    const v = input.value.trim();
+    if(!v) return;
+    routines[routineDay].push({name:v, done:false});
+    input.value = '';
+    buildRoutineDay(); saveState();
+  }
+  function removeRoutineItem(i){
+    routines[routineDay].splice(i,1);
+    buildRoutineDay(); saveState();
+  }
   function buildQuestManageList(){
     const wrap = document.getElementById('quest-manage-list');
     wrap.innerHTML = quests.map((q,i)=>`
@@ -895,7 +958,7 @@
     {axis:'STRENGTH', value:14}, {axis:'WEALTH', value:10}, {axis:'SKILLS', value:16},
     {axis:'KNOWLEDGE', value:12}, {axis:'AGILITY', value:20}
   ];
-  const statPageLink = {STRENGTH:'strength', WEALTH:'stat-wealth', SKILLS:'stat-skills', KNOWLEDGE:'stat-knowledge', AGILITY:'streak'};
+  const statPageLink = {STRENGTH:'recap', WEALTH:'stat-wealth', SKILLS:'stat-skills', KNOWLEDGE:'stat-knowledge', AGILITY:'streak'};
   const PLAYER_RANKS = ['E','D','C','B','A','S','SS','SSS'];
   let playerRank = 0, playerRankMaxed = false;
   function renderPlayerRank(){
@@ -1169,8 +1232,10 @@
     history[lastResetDate] = allDone;
     if(allDone){ streak++; if(streak > longestStreak) longestStreak = streak; addPoints(2); } else { streak = 0; }
     quests.forEach(q=>{ q.done=false; q.counted=false; });
+    DAY_KEYS.forEach(d=>routines[d].forEach(item=>{ item.done=false; }));
     lastResetDate = today;
     buildQuestList(); buildHeatmap();
+    const rl = document.getElementById('routine-list'); if(rl) buildRoutineDay();
     const streakEl = document.getElementById('streak-num'); if(streakEl) streakEl.textContent = streak;
     const ptEl = document.getElementById('pt-pool'); if(ptEl) ptEl.textContent = pointPool;
     saveState();
@@ -1279,7 +1344,7 @@
       title: document.getElementById('st-title').textContent
     };
     const state = {character, stats, quests, customLists, pointPool, streak, history, runHistory, lastResetDate, playerRank, playerRankMaxed,
-      pointsHistory, questsDoneHistory, statSumHistory, longestStreak};
+      pointsHistory, questsDoneHistory, statSumHistory, longestStreak, routines};
     try{
       lsSet('shadowProfile_'+currentProfileKey, JSON.stringify(state));
       lsSet('shadowLastProfile', currentProfileKey);
@@ -1289,6 +1354,7 @@
     if(s.stats) stats.splice(0, stats.length, ...s.stats);
     if(s.quests) quests.splice(0, quests.length, ...s.quests);
     if(s.customLists) Object.assign(customLists, s.customLists);
+    if(s.routines) DAY_KEYS.forEach(d=>{ routines[d].length = 0; if(s.routines[d]) routines[d].push(...s.routines[d]); });
     if(typeof s.pointPool==='number') pointPool = s.pointPool;
     if(typeof s.streak==='number') streak = s.streak;
     Object.keys(history).forEach(k=>delete history[k]);
@@ -1330,15 +1396,16 @@
   }
   function resetToDefaults(){
     stats.splice(0, stats.length,
-      {axis:'STRENGTH', value:14}, {axis:'WEALTH', value:10}, {axis:'SKILLS', value:16},
-      {axis:'KNOWLEDGE', value:12}, {axis:'AGILITY', value:20});
+      {axis:'STRENGTH', value:0}, {axis:'WEALTH', value:0}, {axis:'SKILLS', value:0},
+      {axis:'KNOWLEDGE', value:0}, {axis:'AGILITY', value:0});
     quests.splice(0, quests.length,
       {name:'Push-ups', target:100, unit:'', category:'Body', boss:false, statLink:'STRENGTH', done:false, counted:false},
       {name:'Sit-ups',  target:100, unit:'', category:'Body', boss:false, statLink:'STRENGTH', done:false, counted:false},
       {name:'Squats',   target:100, unit:'', category:'Body', boss:false, statLink:'STRENGTH', done:false, counted:false},
       {name:'Running',  target:10,  unit:'km', category:'Body', boss:false, statLink:'AGILITY', done:false, counted:false, isRunLog:true});
     Object.assign(customLists, {wealth:[], skills:[], knowledge:[]});
-    pointPool = 10; streak = 0;
+    DAY_KEYS.forEach(d=>{ routines[d].length = 0; });
+    pointPool = 0; streak = 0;
     Object.keys(history).forEach(k=>delete history[k]);
     Object.keys(runHistory).forEach(k=>delete runHistory[k]);
     [pointsHistory, questsDoneHistory, statSumHistory].forEach(obj=>Object.keys(obj).forEach(k=>delete obj[k]));
@@ -1351,11 +1418,6 @@
     document.getElementById('in-age').value = character.age || '25';
     document.getElementById('in-class').value = character.cls || 'Assassin';
     document.getElementById('in-title').value = character.title || 'Lost In Dark';
-    document.getElementById('in-str').value = stats[0].value;
-    document.getElementById('in-wealth').value = stats[1].value;
-    document.getElementById('in-skl').value = stats[2].value;
-    document.getElementById('in-know').value = stats[3].value;
-    document.getElementById('in-agi').value = stats[4].value;
   }
   function exportData(){
     saveState();
@@ -1387,39 +1449,19 @@
 
   // ---- generate from setup form ----
   function textVal(id, fallback){ const v=document.getElementById(id).value.trim(); return v===''?fallback:v; }
-  function clampNum(v){ v=parseFloat(v); if(isNaN(v)) v=0; return Math.max(0, Math.min(MAXV, v)); }
   function generateStatus(){
     const name = textVal('in-name','UNKNOWN'), age = textVal('in-age','-');
     const cls = textVal('in-class','NONE'), title = textVal('in-title','NONE');
     const key = profileKey(name, age);
-    let applyFormStats = true;
     if(key !== currentProfileKey){
       const existing = lsGet('shadowProfile_'+key);
-      if(existing){
-        loadState(key);
-        applyFormStats = false;
-      } else {
-        resetToDefaults();
-        currentProfileKey = key;
-        document.getElementById('in-str').value = stats[0].value;
-        document.getElementById('in-wealth').value = stats[1].value;
-        document.getElementById('in-skl').value = stats[2].value;
-        document.getElementById('in-know').value = stats[3].value;
-        document.getElementById('in-agi').value = stats[4].value;
-      }
+      if(existing){ loadState(key); }
+      else { resetToDefaults(); currentProfileKey = key; }
     }
     document.getElementById('st-name').textContent  = name.toUpperCase();
     document.getElementById('st-age').textContent    = age;
     document.getElementById('st-class').textContent  = cls.toUpperCase();
     document.getElementById('st-title').textContent  = title.toUpperCase();
-    if(applyFormStats){
-      stats[0].value = clampNum(document.getElementById('in-str').value);
-      stats[1].value = clampNum(document.getElementById('in-wealth').value);
-      stats[2].value = clampNum(document.getElementById('in-skl').value);
-      stats[3].value = clampNum(document.getElementById('in-know').value);
-      stats[4].value = clampNum(document.getElementById('in-agi').value);
-      pointPool = 10;
-    }
     document.getElementById('pt-pool').textContent = pointPool;
     buildStatRows(); buildRadar(); buildQuestList(); buildQuestManageList();
     buildCustomLists(); buildHeatmap(); drawRunChart();
