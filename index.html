@@ -566,11 +566,17 @@
           <button class="day-tab" data-day="Fri" onclick="selectRoutineDay('Fri')">F</button>
           <button class="day-tab" data-day="Sat" onclick="selectRoutineDay('Sat')">S</button>
         </div>
-        <div class="field" style="flex-direction:row;gap:8px;">
-          <input id="routine-input" type="text" placeholder="Add a task for this day...">
-          <button class="pt-btn" style="width:auto;padding:0 14px;flex-shrink:0;" onclick="addRoutineItem()">Add</button>
+        <div class="manage-list" id="routine-list" style="margin-bottom:16px;"></div>
+
+        <h3 class="stats-heading" style="margin-top:0;">Add a Task</h3>
+        <div class="field"><label>Task Name</label><input id="rt-name" type="text" placeholder="e.g. Leg day"></div>
+        <div class="stat-grid">
+          <div class="field"><label>Target</label><input id="rt-target" type="number" min="1" value="1"></div>
+          <div class="field"><label>Unit</label><input id="rt-unit" type="text" placeholder="reps / km / pages"></div>
         </div>
-        <div class="manage-list" id="routine-list" style="margin-top:14px;"></div>
+        <div class="field"><label>Category</label><input id="rt-cat" type="text" placeholder="e.g. Agility, Skills, or Body / Mind..."></div>
+        <button class="boss-toggle" id="rt-boss" onclick="toggleRoutineBossDraft()">⚔ Mark as Boss Task</button>
+        <button class="generate-btn" style="margin-top:12px;" onclick="addRoutineItem()">Add Task</button>
       </div>
     </section>
 
@@ -817,8 +823,10 @@
   function recalcTodayQuestsDone(){ questsDoneHistory[todayStr()] = quests.filter(q=>q.done).length; }
   function recalcTodayStatSum(){ statSumHistory[todayStr()] = stats.reduce((sum,x)=>sum + x.value, 0); }
   function recalcTodayRun(){
-    const total = quests.filter(q=>q.isRunLog && q.done).reduce((sum,q)=>sum+(parseFloat(q.target)||0), 0);
-    runHistory[todayStr()] = total;
+    const questTotal = quests.filter(q=>q.isRunLog && q.done).reduce((sum,q)=>sum+(parseFloat(q.target)||0), 0);
+    const todayDay = DAY_KEYS[new Date().getDay()];
+    const routineTotal = (routines[todayDay]||[]).filter(q=>q.isRunLog && q.done).reduce((sum,q)=>sum+(parseFloat(q.target)||0), 0);
+    runHistory[todayStr()] = questTotal + routineTotal;
   }
   function toggleCheck(i){
     const q = quests[i];
@@ -872,17 +880,24 @@
       buildQuestList(); buildQuestManageList(); saveState();
     }
   }
+  let newRoutineBoss = false;
   function selectRoutineDay(day){ routineDay = day; buildRoutineDay(); }
   function buildRoutineDay(){
     document.querySelectorAll('.day-tab').forEach(t=>t.classList.toggle('active', t.dataset.day===routineDay));
     const list = routines[routineDay] || [];
     const wrap = document.getElementById('routine-list');
-    wrap.innerHTML = list.map((item,i)=>`
-      <div class="manage-row">
-        <span class="checkbox${item.done?' checked':''}" role="checkbox" aria-checked="${item.done}" tabindex="0" data-index="${i}"></span>
-        <span style="flex:1;${item.done?'color:var(--muted);text-decoration:line-through;':''}">${item.name}</span>
-        <button class="pt-btn" onclick="removeRoutineItem(${i})">×</button>
-      </div>`).join('') || `<p style="color:var(--muted);font-size:.85rem;">No items for this day yet.</p>`;
+    wrap.innerHTML = list.map((item,i)=>{
+      const target = item.target || 1, unit = item.unit || '';
+      return `
+      <div class="quest-item ${item.done?'done':''} ${item.boss?'boss':''}" data-index="${i}">
+        <span class="quest-name">${item.name}${item.boss?' <b>BOSS</b>':''}</span>
+        <span class="quest-progress">
+          <span class="quest-value">[${item.done?target:0}/${target}${unit}]</span>
+          <span class="checkbox ${item.done?'checked':''}" role="checkbox" aria-checked="${item.done}" tabindex="0" data-index="${i}"></span>
+          <button class="pt-btn" onclick="removeRoutineItem(${i})" aria-label="Remove">×</button>
+        </span>
+      </div>`;
+    }).join('') || `<p style="color:var(--muted);font-size:.85rem;">No tasks for this day yet.</p>`;
     wrap.querySelectorAll('.checkbox').forEach(cb=>{
       cb.addEventListener('click', ()=>toggleRoutineItem(+cb.dataset.index));
       cb.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleRoutineItem(+cb.dataset.index); } });
@@ -893,14 +908,36 @@
     if(!item) return;
     item.done = !item.done;
     item.done ? sfxComplete() : sfxClick();
+    if(item.done && !item.counted){
+      if(item.statLink){ bumpStat(item.statLink, 1); } else { addPoints(1); }
+      if(item.logKey){ customLists[item.logKey].push(item.name); buildCustomList(item.logKey); }
+      item.counted = true;
+    }
+    if(item.isRunLog) recalcTodayRun();
     buildRoutineDay(); saveState();
   }
+  function toggleRoutineBossDraft(){
+    newRoutineBoss = !newRoutineBoss;
+    document.getElementById('rt-boss').classList.toggle('active', newRoutineBoss);
+  }
   function addRoutineItem(){
-    const input = document.getElementById('routine-input');
-    const v = input.value.trim();
-    if(!v) return;
-    routines[routineDay].push({name:v, done:false});
-    input.value = '';
+    const name = document.getElementById('rt-name').value.trim();
+    if(!name) return;
+    const target = parseFloat(document.getElementById('rt-target').value) || 1;
+    const unit = document.getElementById('rt-unit').value.trim();
+    const category = document.getElementById('rt-cat').value.trim() || 'General';
+    const running = isRunningQuest(name);
+    const pentagonCat = pentagonFromCategory(category);
+    const statLink = running ? 'AGILITY' : pentagonCat;
+    const logKey = {WEALTH:'wealth', SKILLS:'skills', KNOWLEDGE:'knowledge'}[statLink] || null;
+    routines[routineDay].push({name, target, unit, category, boss:newRoutineBoss,
+      statLink, isRunLog:running, logKey, done:false, counted:false});
+    document.getElementById('rt-name').value = '';
+    document.getElementById('rt-target').value = '';
+    document.getElementById('rt-unit').value = '';
+    document.getElementById('rt-cat').value = '';
+    newRoutineBoss = false;
+    document.getElementById('rt-boss').classList.remove('active');
     buildRoutineDay(); saveState();
   }
   function removeRoutineItem(i){
@@ -1232,7 +1269,7 @@
     history[lastResetDate] = allDone;
     if(allDone){ streak++; if(streak > longestStreak) longestStreak = streak; addPoints(2); } else { streak = 0; }
     quests.forEach(q=>{ q.done=false; q.counted=false; });
-    DAY_KEYS.forEach(d=>routines[d].forEach(item=>{ item.done=false; }));
+    DAY_KEYS.forEach(d=>routines[d].forEach(item=>{ item.done=false; item.counted=false; }));
     lastResetDate = today;
     buildQuestList(); buildHeatmap();
     const rl = document.getElementById('routine-list'); if(rl) buildRoutineDay();
